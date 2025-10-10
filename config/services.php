@@ -24,6 +24,22 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // 'sso' => [
+    //     'base'          => env('SSO_BASE'),
+    //     'client_id'     => env('SSO_CLIENT_ID'),
+    //     'client_secret' => env('SSO_CLIENT_SECRET'),
+    //     'redirect'      => env('SSO_REDIRECT'),
+    //     'scope'         => '', // kalau perlu
+    // ],
+
+    'sso' => [
+        'base'          => env('OAUTH_SERVER_URL'),
+        'client_id'     => env('OAUTH_CLIENT_ID'),
+        'client_secret' => env('OAUTH_CLIENT_SECRET'),
+        'redirect'      => env('OAUTH_REDIRECT_URI'),
+        'scope'         => 'read-profile',
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
