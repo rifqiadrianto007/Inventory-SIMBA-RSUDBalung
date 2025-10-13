@@ -1,17 +1,22 @@
 <?php
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\SsoController;
+use App\Http\Controllers\Auth\SSOController;
 
-Route::get('/', fn() => redirect()->route('login'));
-Route::get('/login', fn() => redirect()->route('sso.login'))->name('login');
-
-Route::get('/login/sso',       [SsoController::class, 'redirect'])->name('sso.login');
-Route::get('/auth/callback',   [SsoController::class, 'callback'])->name('sso.callback');
-
-Route::middleware('auth')->get('/dashboard', fn () => view('welcome'));
-Route::post('/logout',         [SsoController::class, 'logout'])->name('logout');
-
-Route::get('/_netcheck', function () {
-    return \Illuminate\Support\Facades\Http::timeout(5)->get('http://sso-server.test/ping')->body();
+Route::get('/', function () {
+    return view('welcome');
 });
+
+Route::get('/login', [SSOController::class, 'redirect'])->name('login');
+
+Route::get('/auth/callback', [SSOController::class, 'callback'])->name('sso.callback');
+
+Route::get('/dashboard', function() {
+    return view('dashboard');
+})->middleware('auth');
+
+Route::post('/logout', function() {
+    Auth::logout();
+    return redirect('/');
+})->name('logout');
