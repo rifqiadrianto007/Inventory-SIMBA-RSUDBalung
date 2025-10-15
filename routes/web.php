@@ -16,7 +16,7 @@ Route::get('/auth/callback', [SSOController::class, 'callback'])->name('sso.call
 
 Route::get('/dashboard', function() {
     return view('dashboard');
-})->middleware('auth');
+})->middleware('auth')->name('dashboard');
 
 Route::post('/logout', function () {
     Auth::logout();

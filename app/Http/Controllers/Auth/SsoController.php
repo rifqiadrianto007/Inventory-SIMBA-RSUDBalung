@@ -19,10 +19,10 @@ class SSOController extends Controller
     public function callback()
     {
         try {
-            Log::info('SSO callback HIT');
+            Log::info('[CLIENT] SSO callback HIT');
 
-            Log::info('HOST', ['host' => config('services.laravelpassport.host')]);
-            Log::info('REDIRECT', ['redirect' => config('services.laravelpassport.redirect')]);
+            // Log::info('HOST', ['host' => config('services.laravelpassport.host')]);
+            // Log::info('REDIRECT', ['redirect' => config('services.laravelpassport.redirect')]);
 
             $ssoUser = Socialite::driver('laravelpassport')->stateless()->user();
 
