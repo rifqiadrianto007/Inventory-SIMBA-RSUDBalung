@@ -19,7 +19,7 @@ class SSOController extends Controller
     public function callback()
     {
         try {
-            Log::info('[CLIENT] SSO callback HIT');
+            // Log::info('[CLIENT] SSO callback HIT');
 
             // Log::info('HOST', ['host' => config('services.laravelpassport.host')]);
             // Log::info('REDIRECT', ['redirect' => config('services.laravelpassport.redirect')]);
@@ -46,7 +46,14 @@ class SSOController extends Controller
 
             Auth::login($user);
             request()->session()->regenerate();
-            logger('After login -> ' . (Auth::check() ? 'YES' : 'NO'));
+
+            // session()->put('from_sso', true);
+
+            // return response()->view('auth.post-login', [
+            //     'target' => route('dashboard'),
+            // ]);
+
+            // logger('After login -> ' . (Auth::check() ? 'YES' : 'NO'));
 
             return redirect('/dashboard');
         } catch (\Exception $e) {

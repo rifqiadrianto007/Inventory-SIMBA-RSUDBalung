@@ -1,8 +1,40 @@
 <?php
 
-use Illuminate\Support\Facades\Auth;
+// use Illuminate\Support\Facades\Auth;
+// use Illuminate\Support\Facades\Route;
+// use App\Http\Controllers\Auth\SSOController;
+
+// Route::get('/', function () {
+//     return Auth::check()
+//         ? redirect()->route('dashboard')
+//         : redirect()->route('login');
+// })->name('home');
+
+// Route::get('/login', [SSOController::class, 'redirect'])->name('login');
+
+// Route::get('/auth/callback', [SSOController::class, 'callback'])->name('sso.callback');
+
+// Route::get('/dashboard', function() {
+//     return view('dashboard');
+// })->middleware('auth')->name('dashboard');
+
+// Route::post('/logout', function () {
+//     Auth::logout();
+//     request()->session()->invalidate();
+//     request()->session()->regenerateToken();
+
+//     $returnTo = route('login');
+//     $ssoLogout = config('services.laravelpassport.logout_url');
+
+//     return $ssoLogout
+//         ? redirect($ssoLogout.'?redirect='.urlencode($returnTo))
+//         : redirect($returnTo);
+// })->name('logout');
+
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\SSOController;
+use App\Http\Middleware\PreventBackHistory; // kalau pakai alias, ganti dengan 'prevent-back-history'
 
 Route::get('/', function () {
     return Auth::check()
@@ -11,22 +43,24 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/login', [SSOController::class, 'redirect'])->name('login');
-
 Route::get('/auth/callback', [SSOController::class, 'callback'])->name('sso.callback');
 
-Route::get('/dashboard', function() {
+Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware('auth')->name('dashboard');
+})->middleware(['auth', PreventBackHistory::class])->name('dashboard');
 
 Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
 
-    $returnTo = route('login');
+    // lebih fleksibel: mendarat ke home (kalau SSO masih login bisa auto-sign-in; kalau tidak, ke login)
+    $returnTo  = route('home');
     $ssoLogout = config('services.laravelpassport.logout_url');
 
     return $ssoLogout
         ? redirect($ssoLogout.'?redirect='.urlencode($returnTo))
         : redirect($returnTo);
 })->name('logout');
+
+
