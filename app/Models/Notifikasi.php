@@ -1,23 +1,50 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration {
-    public function up(): void {
-        Schema::create('notifikasi', function (Blueprint $table) {
-            $table->id('id_notifikasi');
-            $table->unsignedBigInteger('sso_user_id')->nullable();
-            $table->string('title');
-            $table->text('message')->nullable();
-            $table->string('link')->nullable();
-            $table->boolean('is_read')->default(false);
-            $table->timestamps();
-        });
+use Illuminate\Database\Eloquent\Model;
+
+class Notifikasi extends Model
+{
+    protected $table = 'notifikasi';
+    protected $primaryKey = 'id_notifikasi';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'sso_user_id',
+        'title',
+        'message',
+        'link',
+        'is_read'
+    ];
+
+    protected $casts = [
+        'is_read' => 'boolean'
+    ];
+
+    // 🔗 Relasi ke user_inventory
+    public function user()
+    {
+        return $this->belongsTo(UserInventory::class, 'sso_user_id', 'user_id');
     }
 
-    public function down(): void {
-        Schema::dropIfExists('notifikasi');
+    // 🔹 Helper untuk menandai notifikasi sudah dibaca
+    public function markAsRead(): void
+    {
+        $this->is_read = true;
+        $this->save();
     }
-};
+
+    // 🔹 Helper cepat untuk kirim notifikasi baru
+    public static function send(int $userId, string $title, string $message = null, string $link = null): self
+    {
+        return self::create([
+            'sso_user_id' => $userId,
+            'title' => $title,
+            'message' => $message,
+            'link' => $link,
+            'is_read' => false
+        ]);
+    }
+}

@@ -1,26 +1,45 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration {
-    public function up(): void {
-        Schema::create('item', function (Blueprint $table) {
-            $table->id('id_item');
-            $table->string('name');
-            $table->unsignedBigInteger('id_category');
-            $table->integer('stock_item')->default(0);
-            $table->unsignedBigInteger('id_unit');
-            $table->timestamps();
-            $table->softDeletes();
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-            $table->foreign('id_category')->references('id_category')->on('category');
-            $table->foreign('id_unit')->references('id_satuan')->on('satuan');
-        });
+class Item extends Model
+{
+    use SoftDeletes;
+
+    protected $table = 'item';
+    protected $primaryKey = 'id_item';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'name',
+        'id_category',
+        'stock_item',
+        'id_unit'
+    ];
+
+    protected $casts = [
+        'stock_item' => 'integer'
+    ];
+
+    // 🔗 Relasi ke kategori
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'id_category', 'id_category');
     }
 
-    public function down(): void {
-        Schema::dropIfExists('item');
+    // 🔗 Relasi ke satuan (unit)
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'id_unit', 'id_satuan');
     }
-};
+
+    // 🔗 Relasi ke detail penerimaan (1 item bisa muncul di banyak detail penerimaan)
+    public function detailPenerimaan()
+    {
+        return $this->hasMany(DetailPenerimaan::class, 'id_item', 'id_item');
+    }
+}

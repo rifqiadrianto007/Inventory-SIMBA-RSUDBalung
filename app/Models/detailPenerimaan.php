@@ -1,30 +1,53 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration {
-    public function up(): void {
-        Schema::create('detail_penerimaan', function (Blueprint $table) {
-            $table->id('id_detail_penerimaan');
-            $table->unsignedBigInteger('id_penerimaan');
-            $table->unsignedBigInteger('id_item');
-            $table->unsignedBigInteger('id_category');
-            $table->decimal('volume', 15, 2);
-            $table->unsignedBigInteger('id_satuan');
-            $table->decimal('harga', 15, 2);
-            $table->boolean('is_layak')->default(true);
-            $table->timestamps();
+use Illuminate\Database\Eloquent\Model;
 
-            $table->foreign('id_penerimaan')->references('id_penerimaan')->on('penerimaan');
-            $table->foreign('id_item')->references('id_item')->on('item');
-            $table->foreign('id_category')->references('id_category')->on('category');
-            $table->foreign('id_satuan')->references('id_satuan')->on('satuan');
-        });
+class DetailPenerimaan extends Model
+{
+    protected $table = 'detail_penerimaan';
+    protected $primaryKey = 'id_detail_penerimaan';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'id_penerimaan',
+        'id_item',
+        'id_category',
+        'volume',
+        'id_satuan',
+        'harga',
+        'is_layak'
+    ];
+
+    protected $casts = [
+        'is_layak' => 'boolean',
+        'volume' => 'decimal:2',
+        'harga' => 'decimal:2'
+    ];
+
+    // 🔗 Relasi ke penerimaan
+    public function penerimaan()
+    {
+        return $this->belongsTo(Penerimaan::class, 'id_penerimaan', 'id_penerimaan');
     }
 
-    public function down(): void {
-        Schema::dropIfExists('detail_penerimaan');
+    // 🔗 Relasi ke item
+    public function item()
+    {
+        return $this->belongsTo(Item::class, 'id_item', 'id_item');
     }
-};
+
+    // 🔗 Relasi ke kategori
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'id_category', 'id_category');
+    }
+
+    // 🔗 Relasi ke satuan
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'id_satuan', 'id_satuan');
+    }
+}

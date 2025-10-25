@@ -1,24 +1,35 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration {
-    public function up(): void {
-        Schema::create('detail_pemesanan', function (Blueprint $table) {
-            $table->id('id_detail_pemesanan');
-            $table->unsignedBigInteger('id_pemesanan');
-            $table->unsignedBigInteger('id_satuan');
-            $table->decimal('volume', 15, 2);
-            $table->timestamps();
+use Illuminate\Database\Eloquent\Model;
 
-            $table->foreign('id_pemesanan')->references('id_pemesanan')->on('pemesanan');
-            $table->foreign('id_satuan')->references('id_satuan')->on('satuan');
-        });
+class DetailPemesanan extends Model
+{
+    protected $table = 'detail_pemesanan';
+    protected $primaryKey = 'id_detail_pemesanan';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'id_pemesanan',
+        'id_satuan',
+        'volume'
+    ];
+
+    protected $casts = [
+        'volume' => 'decimal:2',
+    ];
+
+    // 🔗 Relasi ke pemesanan
+    public function pemesanan()
+    {
+        return $this->belongsTo(Pemesanan::class, 'id_pemesanan', 'id_pemesanan');
     }
 
-    public function down(): void {
-        Schema::dropIfExists('detail_pemesanan');
+    // 🔗 Relasi ke satuan
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'id_satuan', 'id_satuan');
     }
-};
+}

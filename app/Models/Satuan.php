@@ -1,20 +1,30 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration {
-    public function up(): void {
-        Schema::create('satuan', function (Blueprint $table) {
-            $table->id('id_satuan');
-            $table->string('name');
-            $table->timestamps();
-            $table->softDeletes();
-        });
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Satuan extends Model
+{
+    use SoftDeletes;
+
+    protected $table = 'satuan';
+    protected $primaryKey = 'id_satuan';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = ['name'];
+
+    // 🔗 Relasi ke item (satu satuan bisa digunakan banyak item)
+    public function items()
+    {
+        return $this->hasMany(Item::class, 'id_unit', 'id_satuan');
     }
 
-    public function down(): void {
-        Schema::dropIfExists('satuan');
+    // 🔗 Relasi ke detail penerimaan
+    public function detailPenerimaan()
+    {
+        return $this->hasMany(DetailPenerimaan::class, 'id_satuan', 'id_satuan');
     }
-};
+}

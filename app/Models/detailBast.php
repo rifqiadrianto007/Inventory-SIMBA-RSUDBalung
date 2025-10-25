@@ -5,20 +5,20 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    public function up(): void {
-        Schema::create('bast', function (Blueprint $table) {
-            $table->id('id_bast');
-            $table->string('no_surat');
-            $table->unsignedBigInteger('id_penerimaan');
-            $table->text('deskripsi')->nullable();
-            $table->string('file_path')->nullable();
+    public function up(): void
+    {
+        Schema::create('detail_bast', function (Blueprint $table) {
+            $table->id('id_detail_bast');
+            $table->unsignedBigInteger('id_bast');
+            $table->unsignedBigInteger('id_item');
+            $table->unsignedBigInteger('id_satuan');
+            $table->decimal('volume', 15, 2);
+            $table->string('keterangan')->nullable();
             $table->timestamps();
 
-            $table->foreign('id_penerimaan')->references('id_penerimaan')->on('penerimaan');
+            $table->foreign('id_bast')->references('id_bast')->on('bast');
+            $table->foreign('id_item')->references('id_item')->on('item');
+            $table->foreign('id_satuan')->references('id_satuan')->on('satuan');
         });
-    }
-
-    public function down(): void {
-        Schema::dropIfExists('bast');
     }
 };

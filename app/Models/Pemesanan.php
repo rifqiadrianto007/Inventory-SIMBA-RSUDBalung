@@ -1,22 +1,50 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration {
-    public function up(): void {
-        Schema::create('pemesanan', function (Blueprint $table) {
-            $table->id('id_pemesanan');
-            $table->unsignedBigInteger('sso_user_id')->nullable();
-            $table->string('asal_instalasi')->nullable();
-            $table->string('status')->default('pending');
-            $table->timestamps();
-            $table->softDeletes();
-        });
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Pemesanan extends Model
+{
+    use SoftDeletes;
+
+    protected $table = 'pemesanan';
+    protected $primaryKey = 'id_pemesanan';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'sso_user_id',
+        'asal_instalasi',
+        'status'
+    ];
+
+    // 🔗 Relasi ke detail pemesanan
+    public function details()
+    {
+        return $this->hasMany(DetailPemesanan::class, 'id_pemesanan', 'id_pemesanan');
     }
 
-    public function down(): void {
-        Schema::dropIfExists('pemesanan');
+    // 🔗 Relasi ke user (PPK/pengaju)
+    public function user()
+    {
+        return $this->belongsTo(UserInventory::class, 'sso_user_id', 'user_id');
     }
-};
+
+    // 🔹 Helper untuk status
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
+}

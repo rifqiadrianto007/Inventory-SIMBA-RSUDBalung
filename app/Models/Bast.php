@@ -1,24 +1,26 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration {
-    public function up(): void {
-        Schema::create('bast', function (Blueprint $table) {
-            $table->id('id_bast');
-            $table->string('no_surat');
-            $table->unsignedBigInteger('id_penerimaan');
-            $table->text('deskripsi')->nullable();
-            $table->string('file_path')->nullable();
-            $table->timestamps();
+use Illuminate\Database\Eloquent\Model;
 
-            $table->foreign('id_penerimaan')->references('id_penerimaan')->on('penerimaan');
-        });
+class Bast extends Model
+{
+    protected $table = 'bast';
+    protected $primaryKey = 'id_bast';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'no_surat',
+        'id_penerimaan',
+        'deskripsi',
+        'file_path'
+    ];
+
+    // 🔗 Relasi ke penerimaan
+    public function penerimaan()
+    {
+        return $this->belongsTo(Penerimaan::class, 'id_penerimaan', 'id_penerimaan');
     }
-
-    public function down(): void {
-        Schema::dropIfExists('bast');
-    }
-};
+}
