@@ -4,60 +4,70 @@ namespace App\Http\Controllers\Auth;
 
 use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Http\RedirectResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
 class SSOController extends Controller
 {
-    public function redirect()
+    public function redirect(): RedirectResponse
     {
         return Socialite::driver('laravelpassport')->stateless()->redirect();
     }
 
-    public function callback()
+    public function callback(): RedirectResponse
     {
         try {
-            // Log::info('[CLIENT] SSO callback HIT');
-
-            // Log::info('HOST', ['host' => config('services.laravelpassport.host')]);
-            // Log::info('REDIRECT', ['redirect' => config('services.laravelpassport.redirect')]);
+            Log::info('[SSO CALLBACK START]', request()->all());
 
             $ssoUser = Socialite::driver('laravelpassport')->stateless()->user();
 
-            // dd($ssoUser);
+            $me = Http::withToken($ssoUser->token)
+                ->get(config('services.laravelpassport.host') . '/api/me')
+                ->throw()
+                ->json();
 
-            $user = User::firstOrCreate(
-                ['email' => $ssoUser->getEmail()],
-                [
-                    'name' => $ssoUser->getName(),
-                    'sso_user_id' => $ssoUser->getId(),
-                    'password' => bcrypt(Str::random(16)),
-                ]
-            );
+            Log::info('[SSO /api/me RESPONSE]', $me);
 
-            if (!$user->wasRecentlyCreated) {
+            $roles       = collect($me['roles'] ?? [])->map(fn($r) => strtolower($r))->all();
+            $primaryRole = $roles[0] ?? '';
+
+            $user = User::where('sso_user_id', $ssoUser->getId())
+                ->orWhere('email', $ssoUser->getEmail())
+                ->first();
+
+            if ($user) {
                 $user->update([
-                    'name' => $ssoUser->getName(),
+                    'name'        => $ssoUser->getName(),
+                    'email'       => $ssoUser->getEmail(),
                     'sso_user_id' => $ssoUser->getId(),
+                    'role'        => $primaryRole !== '' ? $primaryRole : $user->role,
+                ]);
+            } else {
+                $user = User::create([
+                    'name'        => $ssoUser->getName(),
+                    'email'       => $ssoUser->getEmail(),
+                    'password'    => bcrypt(Str::random(16)),
+                    'sso_user_id' => $ssoUser->getId(),
+                    'role'        => $primaryRole, 
                 ]);
             }
 
             Auth::login($user);
             request()->session()->regenerate();
 
-            // session()->put('from_sso', true);
+            Log::info('[CALLBACK AFTER LOGIN]', [
+                'check' => Auth::check(),
+                'user'  => Auth::id(),
+                'role'  => $user->role,
+            ]);
 
-            // return response()->view('auth.post-login', [
-            //     'target' => route('dashboard'),
-            // ]);
-
-            // logger('After login -> ' . (Auth::check() ? 'YES' : 'NO'));
-
-            return redirect('/dashboard');
-        } catch (\Exception $e) {
-            Log::error('SSO Login Error: ' . $e->getMessage());
+            return redirect()->route('after.sso');
+        } catch (\Throwable $e) {
+            Log::error('SSO Login Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return redirect('/')->with('error', 'Login gagal. Silakan coba lagi.');
         }
     }
