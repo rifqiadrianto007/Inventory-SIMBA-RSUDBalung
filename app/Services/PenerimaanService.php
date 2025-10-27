@@ -4,7 +4,7 @@ namespace App\Services;
 use App\Models\Penerimaan;
 use App\Models\DetailPenerimaan;
 use App\Models\Bast;
-use App\Models\DetailBast;
+use App\Models\detailBast;
 use App\Services\InventoryService;
 use App\Services\PdfService;
 use App\Services\LogService;
@@ -95,8 +95,8 @@ class PenerimaanService
 
                 // buat detail_bast
                 foreach ($penerimaan->details as $d) {
-                    if (class_exists(DetailBast::class)) {
-                        DetailBast::create([
+                    if (class_exists(detailBast::class)) {
+                        detailBast::create([
                             'id_bast' => $bast->id_bast,
                             'id_item' => $d->id_item,
                             'id_satuan' => $d->id_satuan,

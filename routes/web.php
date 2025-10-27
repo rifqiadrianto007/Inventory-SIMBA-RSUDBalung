@@ -3,26 +3,20 @@
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PemesananController;
-use App\Http\Controllers\PenerimaanController;
-use App\Http\Controllers\BASTController;
-use App\Http\Controllers\ItemController;
+use App\Http\Controllers\Inventory\PemesananController;
+use App\Http\Controllers\Inventory\PenerimaanController;
+use App\Http\Controllers\Inventory\BastController;
+use App\Http\Controllers\Inventory\ItemController;
+use App\Http\Controllers\Inventory\NotifikasiController;
 use App\Http\Controllers\LogActivityController;
-use App\Http\Controllers\NotifikasiController;
-
-Route::get('/', function () {
-    return Inertia::render('Home', [
-        'title' => 'Halo dari Laravel + React + Inertia'
-    ]);
-});
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| WEB ROUTES
 |--------------------------------------------------------------------------
 |
-| Semua rute web (dengan session & CSRF protection) didefinisikan di sini.
-| Rute ini cocok untuk aplikasi inventory berbasis website internal.
+| Semua rute aplikasi web dengan dukungan session & CSRF.
+| Cocok untuk sistem inventory berbasis Laravel + Inertia/Blade.
 |
 */
 
@@ -31,60 +25,57 @@ Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
 
 // ==================== PEMESANAN (Bagian Instalasi / PPK) ====================
-// Melihat daftar barang dan melakukan pemesanan
+// Menampilkan daftar pemesanan
 Route::get('/pemesanan', [PemesananController::class, 'index'])->name('pemesanan.index');
 
-// Membuat data belanja (klik icon "+")
+// Form tambah pemesanan (icon “+”)
 Route::get('/pemesanan/create', [PemesananController::class, 'create'])->name('pemesanan.create');
-Route::post('/pemesanan/store', [PemesananController::class, 'store'])->name('pemesanan.store');
 
-// Mengedit data belanja
-Route::get('/pemesanan/{id}/edit', [PemesananController::class, 'edit'])->name('pemesanan.edit');
-Route::put('/pemesanan/{id}', [PemesananController::class, 'update'])->name('pemesanan.update');
+// Simpan pemesanan baru
+Route::post('/pemesanan', [PemesananController::class, 'store'])->name('pemesanan.store');
 
-// Menghapus data belanja
-Route::delete('/pemesanan/{id}', [PemesananController::class, 'destroy'])->name('pemesanan.destroy');
+// Lihat detail pemesanan
+Route::get('/pemesanan/{id}', [PemesananController::class, 'show'])->name('pemesanan.show');
 
-// Melihat status pemesanan
-Route::get('/pemesanan/status', [PemesananController::class, 'status'])->name('pemesanan.status');
+// Unduh struk pemesanan (PDF)
+Route::get('/pemesanan/{id}/download', [PemesananController::class, 'downloadStruk'])->name('pemesanan.download');
 
 
 // ==================== PENERIMAAN (Bagian Gudang / Teknisi) ====================
-// Melihat daftar penerimaan barang
+// Daftar penerimaan barang
 Route::get('/penerimaan', [PenerimaanController::class, 'index'])->name('penerimaan.index');
 
-// Melihat detail penerimaan
+// Detail penerimaan tertentu
 Route::get('/penerimaan/{id}', [PenerimaanController::class, 'show'])->name('penerimaan.show');
 
-// Upload BAST (oleh kepala gudang)
-Route::get('/penerimaan/{id}/upload', [PenerimaanController::class, 'uploadForm'])->name('penerimaan.uploadForm');
-Route::post('/penerimaan/{id}/upload', [PenerimaanController::class, 'uploadBAST'])->name('penerimaan.uploadBAST');
+// Simpan penerimaan baru (barang datang)
+Route::post('/penerimaan', [PenerimaanController::class, 'store'])->name('penerimaan.store');
 
-// Mengubah status kelayakan barang (oleh teknisi)
-Route::post('/penerimaan/{id}/update-status', [PenerimaanController::class, 'updateStatus'])->name('penerimaan.updateStatus');
-
-// Konfirmasi penerimaan barang (tim teknis)
-Route::post('/penerimaan/{id}/confirm', [PenerimaanController::class, 'confirm'])->name('penerimaan.confirm');
+// Update kelayakan barang
+Route::post('/penerimaan/{id}/set-layak', [PenerimaanController::class, 'setLayak'])->name('penerimaan.setLayak');
 
 
 // ==================== BAST (Berita Acara Serah Terima) ====================
-// Membuat BAST (oleh kepala gudang)
-Route::get('/bast/create/{id_penerimaan}', [BASTController::class, 'create'])->name('bast.create');
-Route::post('/bast/store', [BASTController::class, 'store'])->name('bast.store');
+// Membuat BAST manual (oleh kepala gudang)
+Route::post('/bast/store', [BastController::class, 'store'])->name('bast.store');
 
 // Mengunduh file BAST
-Route::get('/bast/{id}/download', [BASTController::class, 'download'])->name('bast.download');
+Route::get('/bast/{id}/download', [BastController::class, 'download'])->name('bast.download');
 
 
 // ==================== STOK BARANG (Admin Gudang) ====================
-// Melihat stok
+// Melihat stok barang
 Route::get('/stok', [ItemController::class, 'index'])->name('stok.index');
 
-// Mengedit stok barang
-Route::get('/stok/{id}/edit', [ItemController::class, 'edit'])->name('stok.edit');
-Route::put('/stok/{id}', [ItemController::class, 'update'])->name('stok.update');
+// Mengubah stok barang
+Route::post('/stok/{id}/update', [ItemController::class, 'updateStock'])->name('stok.updateStock');
 
 
-// ==================== LOG AKTIVITAS DAN NOTIFIKASI ====================
-Route::get('/log', [LogActivityController::class, 'index'])->name('log.index');
+// ==================== NOTIFIKASI ====================
 Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
+Route::post('/notifikasi/{id}/read', [NotifikasiController::class, 'markRead'])->name('notifikasi.markRead');
+Route::post('/notifikasi/read-all', [NotifikasiController::class, 'markAllRead'])->name('notifikasi.markAllRead');
+
+
+// ==================== LOG AKTIVITAS ====================
+Route::get('/log', [LogActivityController::class, 'index'])->name('log.index');

@@ -1,64 +1,65 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Inventory;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Notifikasi;
 
+/**
+ * @method void middleware(string|array $middleware, array $options = [])
+ */
 class NotifikasiController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     /**
-     * Display a listing of the resource.
+     * Menampilkan semua notifikasi user login
      */
     public function index()
     {
-        //
+        $userId = Auth::check() ? Auth::id() : null;
+
+        if (!$userId) {
+            return response()->json(['error' => 'User belum login'], 401);
+        }
+
+        $notes = Notifikasi::where('sso_user_id', $userId)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json($notes);
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Tandai notifikasi sebagai dibaca
      */
-    public function create()
+    public function markRead($id)
     {
-        //
+        $note = Notifikasi::findOrFail($id);
+        $note->is_read = true;
+        $note->save();
+
+        return response()->json(['message' => 'Notifikasi telah ditandai sebagai dibaca.']);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Tandai semua notifikasi user sebagai dibaca
      */
-    public function store(Request $request)
+    public function markAllRead()
     {
-        //
-    }
+        $userId = Auth::check() ? Auth::id() : null;
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+        if (!$userId) {
+            return response()->json(['error' => 'User belum login'], 401);
+        }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+        Notifikasi::where('sso_user_id', $userId)->update(['is_read' => true]);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return response()->json(['message' => 'Semua notifikasi telah ditandai sebagai dibaca.']);
     }
 }

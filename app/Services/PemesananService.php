@@ -82,4 +82,16 @@ class PemesananService
         $this->pdf->generate('pemesanan.struk', ['pemesanan'=>$p], $path);
         return ['file_url'=> asset("storage/{$path}")];
     }
+
+    /**
+ * Ambil semua pemesanan beserta detail dan user
+ *
+ * @return \Illuminate\Database\Eloquent\Collection
+ */
+    public function getAllPemesanan()
+    {
+        return \App\Models\Pemesanan::with('details.satuan','user')
+            ->orderByDesc('created_at')
+            ->get();
+    }
 }

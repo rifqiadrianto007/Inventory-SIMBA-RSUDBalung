@@ -1,64 +1,87 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Inventory;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Services\PemesananService;
 
+/**
+ * @method void middleware(string|array $middleware, array $options = [])
+ */
 class PemesananController extends Controller
 {
+    protected PemesananService $service;
+
+    public function __construct(PemesananService $service)
+    {
+        $this->service = $service;
+        $this->middleware('auth');
+    }
+
     /**
-     * Display a listing of the resource.
+     * 📋 Menampilkan daftar semua pemesanan
      */
     public function index()
     {
-        //
+        $data = $this->service->getAllPemesanan();
+        return view('inventory.pemesanan.index', compact('data'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * ➕ Form tambah pemesanan
      */
     public function create()
     {
-        //
+        return view('inventory.pemesanan.create');
     }
 
     /**
-     * Store a newly created resource in storage.
+     * 🧾 Simpan data pemesanan baru (klik tombol +)
      */
     public function store(Request $request)
     {
-        //
+        $data = $request->validate([
+            'sso_user_id' => 'nullable|integer',
+            'asal_instalasi' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.id_item' => 'required|exists:item,id_item',
+            'items.*.id_satuan' => 'required|exists:satuan,id_satuan',
+            'items.*.volume' => 'required|numeric|min:0.01',
+        ]);
+
+        // Kirim ke service untuk diproses
+        $result = $this->service->createPemesanan($data);
+
+        if (isset($result['error'])) {
+            return back()->with('error', 'Stok barang tidak mencukupi untuk beberapa item.');
+        }
+
+        return redirect()
+            ->route('pemesanan.index')
+            ->with('success', 'Pemesanan berhasil dibuat dan disetujui otomatis.');
     }
 
     /**
-     * Display the specified resource.
+     * 🔍 Lihat detail pemesanan
      */
-    public function show(string $id)
+    public function show($id)
     {
-        //
+        $pemesanan = $this->service->getPemesanan($id);
+        return view('inventory.pemesanan.show', compact('pemesanan'));
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * 📥 Unduh struk pemesanan (PDF)
      */
-    public function edit(string $id)
+    public function downloadStruk($id)
     {
-        //
-    }
+        $path = $this->service->downloadStruk($id);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
+        if (!$path || !isset($path['file_url'])) {
+            return back()->with('error', 'Struk pemesanan tidak ditemukan.');
+        }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return redirect($path['file_url']);
     }
 }

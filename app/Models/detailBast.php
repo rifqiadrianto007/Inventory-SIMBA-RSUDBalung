@@ -1,24 +1,36 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Models;
 
-return new class extends Migration {
-    public function up(): void
+use Illuminate\Database\Eloquent\Model;
+
+class DetailBast extends Model
+{
+    protected $table = 'detail_bast';
+    protected $primaryKey = 'id_detail_bast';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'id_bast',
+        'id_item',
+        'id_satuan',
+        'volume',
+        'keterangan'
+    ];
+
+    public function bast()
     {
-        Schema::create('detail_bast', function (Blueprint $table) {
-            $table->id('id_detail_bast');
-            $table->unsignedBigInteger('id_bast');
-            $table->unsignedBigInteger('id_item');
-            $table->unsignedBigInteger('id_satuan');
-            $table->decimal('volume', 15, 2);
-            $table->string('keterangan')->nullable();
-            $table->timestamps();
-
-            $table->foreign('id_bast')->references('id_bast')->on('bast');
-            $table->foreign('id_item')->references('id_item')->on('item');
-            $table->foreign('id_satuan')->references('id_satuan')->on('satuan');
-        });
+        return $this->belongsTo(Bast::class, 'id_bast', 'id_bast');
     }
-};
+
+    public function item()
+    {
+        return $this->belongsTo(Item::class, 'id_item', 'id_item');
+    }
+
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'id_satuan', 'id_satuan');
+    }
+}
