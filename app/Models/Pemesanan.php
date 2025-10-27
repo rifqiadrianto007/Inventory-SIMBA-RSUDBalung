@@ -17,7 +17,8 @@ class Pemesanan extends Model
     protected $fillable = [
         'sso_user_id',
         'asal_instalasi',
-        'status'
+        'status',
+        'pdf_path'
     ];
 
     // 🔗 Relasi ke detail pemesanan
@@ -26,13 +27,13 @@ class Pemesanan extends Model
         return $this->hasMany(DetailPemesanan::class, 'id_pemesanan', 'id_pemesanan');
     }
 
-    // 🔗 Relasi ke user (PPK/pengaju)
+    // 🔗 Relasi ke user (pengaju / PPK)
     public function user()
     {
         return $this->belongsTo(UserInventory::class, 'sso_user_id', 'user_id');
     }
 
-    // 🔹 Helper untuk status
+    // 🔹 Helper status
     public function isPending(): bool
     {
         return $this->status === 'pending';

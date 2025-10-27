@@ -13,6 +13,7 @@ class DetailPemesanan extends Model
 
     protected $fillable = [
         'id_pemesanan',
+        'id_item',
         'id_satuan',
         'volume'
     ];
@@ -31,5 +32,11 @@ class DetailPemesanan extends Model
     public function satuan()
     {
         return $this->belongsTo(Satuan::class, 'id_satuan', 'id_satuan');
+    }
+
+    // 🔗 Relasi ke item
+    public function item()
+    {
+        return $this->belongsTo(Item::class, 'id_item', 'id_item');
     }
 }
