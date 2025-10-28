@@ -6,9 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\PemesananService;
 
-/**
- * @method void middleware(string|array $middleware, array $options = [])
- */
 class PemesananController extends Controller
 {
     protected PemesananService $service;
@@ -16,7 +13,7 @@ class PemesananController extends Controller
     public function __construct(PemesananService $service)
     {
         $this->service = $service;
-        $this->middleware('auth');
+        // $this->middleware('auth'); // ✅ ini akan berfungsi jika base Controller sudah benar
     }
 
     /**
