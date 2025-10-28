@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Inventory;
 
 use App\Http\Controllers\Controller;
@@ -16,38 +17,48 @@ class PenerimaanController extends Controller
     public function __construct(PenerimaanService $service)
     {
         $this->service = $service;
-        $this->middleware('auth');
     }
 
-    // Simpan penerimaan saat barang datang
-    public function store(Request $request)
+    /**
+     * 📦 Menampilkan daftar penerimaan barang
+     */
+    public function index()
     {
-        $data = $request->validate([
-            'sso_user_id' => 'nullable|integer',
-            'tanggal_penerimaan' => 'required|date',
-            'total_harga' => 'nullable|numeric',
-            'details' => 'required|array|min:1',
-            'details.*.id_item' => 'required|exists:item,id_item',
-            'details.*.id_category' => 'required|exists:category,id_category',
-            'details.*.volume' => 'required|numeric|min:0.01',
-            'details.*.id_satuan' => 'required|exists:satuan,id_satuan',
-            'details.*.harga' => 'required|numeric|min:0',
-        ]);
-
-        $penerimaan = $this->service->createPenerimaan($data);
-        return response()->json($penerimaan);
+        $data = $this->service->getAllPenerimaan();
+        return view('inventory.penerimaan.index', compact('data'));
     }
 
-    // Set layak/tidak layak untuk satu detail
-    public function setLayak(Request $request, $idDetail)
-    {
-        $request->validate(['is_layak' => 'required|boolean']);
-        $resp = $this->service->setDetailLayak($idDetail, $request->is_layak);
-        return response()->json($resp);
-    }
-
+    /**
+     * 🔍 Menampilkan detail penerimaan barang
+     */
     public function show($id)
     {
-        return response()->json($this->service->getPenerimaan($id));
+        $penerimaan = $this->service->getPenerimaan($id);
+        return view('inventory.penerimaan.show', compact('penerimaan'));
+    }
+
+    /**
+     * ✅ Mengubah status kelayakan barang
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate(['is_layak' => 'required|boolean']);
+
+        $result = $this->service->setDetailLayak($id, $request->is_layak);
+        $message = $request->is_layak
+            ? 'Barang layak digunakan.'
+            : 'Barang tidak layak digunakan.';
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * 🧾 Konfirmasi pengecekan data belanja
+     */
+    public function confirm($id)
+    {
+        $result = $this->service->confirmPenerimaan($id);
+
+        return back()->with('success', 'Anda berhasil mengecek barang belanja.');
     }
 }

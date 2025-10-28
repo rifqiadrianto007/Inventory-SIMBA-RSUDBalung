@@ -1,10 +1,12 @@
 <?php
+
 namespace App\Http\Controllers\Inventory;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\PdfService;
 use App\Services\PenerimaanService;
+use App\Models\Bast;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @method void middleware(string|array $middleware, array $options = [])
@@ -12,34 +14,44 @@ use App\Services\PenerimaanService;
 
 class BastController extends Controller
 {
-    protected PdfService $pdf;
     protected PenerimaanService $penerimaanService;
 
-    public function __construct(PdfService $pdf, PenerimaanService $penerimaanService)
+    public function __construct(PenerimaanService $penerimaanService)
     {
-        $this->pdf = $pdf;
         $this->penerimaanService = $penerimaanService;
-        $this->middleware('auth');
     }
 
-    // Unduh BAST (file yang sudah dibuat)
+    /**
+     * 📥 Mengunduh file BAST
+     */
     public function download($id)
     {
         $bast = $this->penerimaanService->getBast($id);
-        if (!$bast) return response()->json(['error'=>'BAST tidak ditemukan'],404);
-        return response()->json(['file_url' => asset("storage/{$bast->file_path}")]);
+        if (!$bast || !Storage::disk('public')->exists($bast->file_path)) {
+            return back()->with('error', 'File BAST tidak ditemukan.');
+        }
+
+        return response()->download(storage_path("app/public/{$bast->file_path}"));
     }
 
-    // (opsional) buat BAST manual - kepala gudang
-    public function store(Request $request)
+    /**
+     * 📤 Upload BAST manual oleh admin gudang
+     */
+    public function upload(Request $request, $id)
     {
-        $data = $request->validate([
-            'id_penerimaan' => 'required|exists:penerimaan,id_penerimaan',
-            'no_surat' => 'required|string',
-            'deskripsi' => 'nullable|string',
-            'staker' => 'nullable|array'
+        $request->validate([
+            'file_bast' => 'required|file|mimes:pdf|max:2048',
         ]);
-        $bast = $this->penerimaanService->createBastManual($data);
-        return response()->json($bast);
+
+        $path = $request->file('file_bast')->store('bast', 'public');
+
+        Bast::create([
+            'id_penerimaan' => $id,
+            'no_surat' => 'BAST-MANUAL-' . now()->format('YmdHis'),
+            'file_path' => $path,
+            'deskripsi' => 'Upload manual oleh admin gudang',
+        ]);
+
+        return back()->with('success', 'BAST berhasil diupload.');
     }
 }

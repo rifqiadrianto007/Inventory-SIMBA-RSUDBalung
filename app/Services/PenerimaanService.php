@@ -119,6 +119,22 @@ class PenerimaanService
         return ['ok'=>true,'auto_approved'=>$allLayak];
     }
 
+    public function getAllPenerimaan()
+    {
+        return Penerimaan::with('details.item', 'details.satuan', 'bast')
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    public function confirmPenerimaan($id)
+    {
+        $penerimaan = Penerimaan::with('details')->findOrFail($id);
+        $penerimaan->status = 'checked';
+        $penerimaan->save();
+
+        return $penerimaan;
+    }
+
     public function getPenerimaan($id)
     {
         return Penerimaan::with('details.item','details.satuan','bast')->findOrFail($id);
