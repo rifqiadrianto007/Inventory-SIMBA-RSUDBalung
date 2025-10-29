@@ -154,4 +154,33 @@ class PenerimaanService
         // implement serupa generate otomatis, tetapi gunakan no_surat dari $data
         // ...
     }
+
+    public function validateReceivedItems($idPenerimaan)
+    {
+        $p = Penerimaan::with('details.item')->findOrFail($idPenerimaan);
+
+        $p->status = 'checked';
+        $isValid = true;
+
+        foreach ($p->details as $d) {
+            $expected = $d->item->detailPemesanan()->where('id_item', $d->id_item)->first()->volume ?? 0;
+            if ($d->volume != $expected) {
+                $d->update(['is_layak' => false]);
+                $isValid = false;
+            }
+        }
+
+        $p->save();
+
+        if ($isValid) {
+            $this->setDetailLayak($p->details->first()->id_detail_penerimaan, true);
+        }
+
+        return [
+            'ok' => true,
+            'valid' => $isValid,
+            'message' => $isValid ? 'Semua barang sesuai' : 'Beberapa barang tidak sesuai jumlah',
+        ];
+    }
+
 }

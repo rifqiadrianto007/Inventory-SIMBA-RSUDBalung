@@ -44,7 +44,6 @@ class PemesananService
         DB::beginTransaction();
 
         try {
-            // 1️⃣ Buat pemesanan utama
             $pemesanan = Pemesanan::create([
                 'sso_user_id'    => $data['sso_user_id'] ?? null,
                 'asal_instalasi' => $data['asal_instalasi'] ?? '-',
@@ -54,44 +53,41 @@ class PemesananService
             $stokKurang = [];
             $detailList = [];
 
-            // 2️⃣ Periksa stok setiap item
             foreach ($data['items'] as $item) {
-                $barang = Item::findOrFail($item['id_item']);
+                $barang = Item::lockForUpdate()->findOrFail($item['id_item']);
 
                 if ($barang->stock_item < $item['volume']) {
                     $stokKurang[] = $barang->name;
+                    $statusItem = 'stok_kurang';
                 } else {
-                    // simpan detail sementara
-                    $detailList[] = [
-                        'id_pemesanan' => $pemesanan->id_pemesanan,
-                        'id_satuan'    => $item['id_satuan'],
-                        'volume'       => $item['volume'],
-                        'created_at'   => now(),
-                        'updated_at'   => now(),
-                    ];
-
-                    // kurangi stok langsung (karena auto-approve)
-                    $barang->stock_item -= $item['volume'];
-                    $barang->save();
+                    $statusItem = 'ok';
+                    $barang->decrement('stock_item', $item['volume']);
                 }
-            }
 
-            // 3️⃣ Jika stok tidak cukup, batalkan transaksi
-            if (!empty($stokKurang)) {
-                DB::rollBack();
-                return [
-                    'error' => 'Stok barang tidak mencukupi untuk: ' . implode(', ', $stokKurang),
+                $detailList[] = [
+                    'id_pemesanan' => $pemesanan->id_pemesanan,
+                    'id_satuan'    => $item['id_satuan'],
+                    'volume'       => $item['volume'],
+                    'status_item'  => $statusItem,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
                 ];
             }
 
-            // 4️⃣ Simpan detail pemesanan
             DetailPemesanan::insert($detailList);
 
-            // 5️⃣ Update status → approved otomatis
-            $pemesanan->status = 'approved';
+            // Jika semua stok mencukupi → langsung approve
+            if (empty($stokKurang)) {
+                $pemesanan->status = 'approved';
+                $msg = "Pemesanan #{$pemesanan->id_pemesanan} disetujui otomatis.";
+            } else {
+                $pemesanan->status = 'partial';
+                $msg = "Beberapa barang tidak cukup stok: " . implode(', ', $stokKurang);
+            }
+
             $pemesanan->save();
 
-            // 6️⃣ Generate PDF struk
+            // Generate PDF (tetap muncul meski stok sebagian kurang)
             $noStruk  = 'PO-' . date('Ymd') . '-' . Str::random(5);
             $fileName = "struk_pemesanan_{$noStruk}_{$pemesanan->id_pemesanan}.pdf";
             $filePath = "pemesanan/{$fileName}";
@@ -101,31 +97,26 @@ class PemesananService
                 'pemesanan'  => $pemesanan->load('details.satuan'),
                 'tanggal'    => now()->format('d M Y'),
                 'instalasi'  => $pemesanan->asal_instalasi,
+                'stok_kurang'=> $stokKurang,
             ];
 
             $this->pdf->generate('pdf.pemesanan_struk', $pdfData, $filePath);
 
-            // 7️⃣ Catat log
-            $this->log->record(
-                'create_pemesanan',
-                'pemesanan',
-                "Pemesanan #{$pemesanan->id_pemesanan} dibuat dan disetujui otomatis"
-            );
-
-            // 8️⃣ Kirim notifikasi
+            // Log & Notifikasi
+            $this->log->record('create_pemesanan', 'pemesanan', $msg);
             $this->notify->send(
                 $pemesanan->sso_user_id ?? 0,
-                'Pemesanan Disetujui',
-                "Pemesanan #{$pemesanan->id_pemesanan} berhasil dibuat dan disetujui otomatis.",
+                'Status Pemesanan',
+                $msg,
                 "/pemesanan/{$pemesanan->id_pemesanan}"
             );
 
             DB::commit();
 
             return [
-                'ok'       => true,
-                'pemesanan'=> $pemesanan->load('details.satuan'),
-                'file_url' => asset("storage/{$filePath}"),
+                'ok' => true,
+                'pemesanan' => $pemesanan->load('details.satuan'),
+                'file_url'  => asset("storage/{$filePath}"),
             ];
         } catch (\Throwable $e) {
             DB::rollBack();
