@@ -29,7 +29,7 @@ class PemesananService
      */
     public function getAllPemesanan()
     {
-        return Pemesanan::with('details.satuan', 'user')
+        return Pemesanan::with('details.item', 'details.satuan', 'user')
             ->orderByDesc('created_at')
             ->get();
     }
@@ -37,13 +37,14 @@ class PemesananService
     /**
      * 📦 Buat pemesanan baru
      * Otomatis disetujui bila stok cukup.
-     * Membuat detail, mengurangi stok, dan generate struk PDF.
+     * Menyimpan status stok, mengurangi stok, dan generate struk PDF.
      */
     public function createPemesanan(array $data)
     {
         DB::beginTransaction();
 
         try {
+            // 1️⃣ Buat pemesanan utama
             $pemesanan = Pemesanan::create([
                 'sso_user_id'    => $data['sso_user_id'] ?? null,
                 'asal_instalasi' => $data['asal_instalasi'] ?? '-',
@@ -53,70 +54,98 @@ class PemesananService
             $stokKurang = [];
             $detailList = [];
 
+            // 2️⃣ Periksa stok tiap item
             foreach ($data['items'] as $item) {
-                $barang = Item::lockForUpdate()->findOrFail($item['id_item']);
+                $barang = Item::findOrFail($item['id_item']);
 
-                if ($barang->stock_item < $item['volume']) {
-                    $stokKurang[] = $barang->name;
-                    $statusItem = 'stok_kurang';
-                } else {
-                    $statusItem = 'ok';
-                    $barang->decrement('stock_item', $item['volume']);
-                }
+                // tentukan status stok
+                $statusItem = $barang->stock_item < $item['volume']
+                    ? 'stok kurang'
+                    : 'ok';
 
+                // simpan detail
                 $detailList[] = [
                     'id_pemesanan' => $pemesanan->id_pemesanan,
+                    'id_item'      => $item['id_item'],
                     'id_satuan'    => $item['id_satuan'],
                     'volume'       => $item['volume'],
                     'status_item'  => $statusItem,
                     'created_at'   => now(),
                     'updated_at'   => now(),
                 ];
+
+                // jika stok cukup → kurangi stok
+                if ($statusItem === 'ok') {
+                    $barang->stock_item -= $item['volume'];
+                    $barang->save();
+                } else {
+                    $stokKurang[] = $barang->name;
+                }
             }
 
+            // 3️⃣ Simpan semua detail
             DetailPemesanan::insert($detailList);
 
-            // Jika semua stok mencukupi → langsung approve
-            if (empty($stokKurang)) {
-                $pemesanan->status = 'approved';
-                $msg = "Pemesanan #{$pemesanan->id_pemesanan} disetujui otomatis.";
-            } else {
-                $pemesanan->status = 'partial';
-                $msg = "Beberapa barang tidak cukup stok: " . implode(', ', $stokKurang);
+            // 4️⃣ Jika stok tidak cukup, pemesanan dibatalkan
+            if (!empty($stokKurang)) {
+                $pemesanan->status = 'rejected';
+                $pemesanan->save();
+
+                $this->notify->send(
+                    $pemesanan->sso_user_id ?? 0,
+                    'Pemesanan Gagal',
+                    'Pemesanan dibatalkan karena stok tidak mencukupi untuk: ' . implode(', ', $stokKurang),
+                    "/pemesanan/{$pemesanan->id_pemesanan}"
+                );
+
+                DB::commit();
+
+                return [
+                    'error' => 'Stok tidak mencukupi: ' . implode(', ', $stokKurang),
+                    'status' => 'rejected',
+                ];
             }
 
+            // 5️⃣ Semua stok cukup → status approved
+            $pemesanan->status = 'approved';
             $pemesanan->save();
 
-            // Generate PDF (tetap muncul meski stok sebagian kurang)
+            // 6️⃣ Generate struk PDF
             $noStruk  = 'PO-' . date('Ymd') . '-' . Str::random(5);
             $fileName = "struk_pemesanan_{$noStruk}_{$pemesanan->id_pemesanan}.pdf";
             $filePath = "pemesanan/{$fileName}";
 
             $pdfData = [
                 'no_struk'   => $noStruk,
-                'pemesanan'  => $pemesanan->load('details.satuan'),
+                'pemesanan'  => $pemesanan->load('details.item', 'details.satuan'),
                 'tanggal'    => now()->format('d M Y'),
                 'instalasi'  => $pemesanan->asal_instalasi,
-                'stok_kurang'=> $stokKurang,
             ];
 
             $this->pdf->generate('pdf.pemesanan_struk', $pdfData, $filePath);
 
-            // Log & Notifikasi
-            $this->log->record('create_pemesanan', 'pemesanan', $msg);
+            // 7️⃣ Catat log
+            $this->log->record(
+                'create_pemesanan',
+                'pemesanan',
+                "Pemesanan #{$pemesanan->id_pemesanan} disetujui otomatis"
+            );
+
+            // 8️⃣ Kirim notifikasi sukses
             $this->notify->send(
                 $pemesanan->sso_user_id ?? 0,
-                'Status Pemesanan',
-                $msg,
+                'Pemesanan Disetujui',
+                "Pemesanan #{$pemesanan->id_pemesanan} berhasil dibuat dan disetujui otomatis.",
                 "/pemesanan/{$pemesanan->id_pemesanan}"
             );
 
             DB::commit();
 
             return [
-                'ok' => true,
-                'pemesanan' => $pemesanan->load('details.satuan'),
-                'file_url'  => asset("storage/{$filePath}"),
+                'ok'       => true,
+                'status'   => 'approved',
+                'pemesanan'=> $pemesanan->load('details.item', 'details.satuan'),
+                'file_url' => asset("storage/{$filePath}"),
             ];
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -129,7 +158,7 @@ class PemesananService
      */
     public function getPemesanan($id)
     {
-        return Pemesanan::with('details.satuan', 'user')->findOrFail($id);
+        return Pemesanan::with('details.item', 'details.satuan', 'user')->findOrFail($id);
     }
 
     /**

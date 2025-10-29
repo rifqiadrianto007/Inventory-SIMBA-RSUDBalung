@@ -5,6 +5,31 @@ use App\Models\Item;
 
 class InventoryService
 {
+    /**
+    * Set stock item ke nilai tertentu secara aman (transaction + lock).
+    *
+    * @param int $itemId
+    * @param float|int $newStock
+    * @return \App\Models\Item
+    * @throws \RuntimeException
+    */
+    public function updateStock(int $itemId, float $newStock)
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($itemId, $newStock) {
+            $item = \App\Models\Item::where('id_item', $itemId)->lockForUpdate()->firstOrFail();
+
+            if ($newStock < 0) {
+                throw new \RuntimeException("Nilai stok tidak boleh negatif.");
+            }
+
+            $item->stock_item = $newStock;
+            $item->save();
+
+            // opsional: catat log atau notifikasi kecil
+            return $item->fresh();
+        });
+    }
+
     // update stok absolute (set)
     public function setStock(int $itemId, float $value): Item
     {
