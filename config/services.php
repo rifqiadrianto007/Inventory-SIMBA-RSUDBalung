@@ -18,6 +18,10 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
+    'resend' => [
+        'key' => env('RESEND_KEY'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
@@ -30,5 +34,11 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-
+    'laravelpassport' => [
+        'client_id' => env('PASSPORT_CLIENT_ID'),
+        'client_secret' => env('PASSPORT_CLIENT_SECRET'),
+        'redirect' => env('PASSPORT_REDIRECT_URI'),
+        'host' => env('PASSPORT_HOST'),
+        'logout_url' => env('SSO_LOGOUT_URL'),
+    ],
 ];
