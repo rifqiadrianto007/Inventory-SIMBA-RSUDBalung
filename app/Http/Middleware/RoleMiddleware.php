@@ -10,17 +10,18 @@ class RoleMiddleware
 {
     /**
      * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, ...$roles)
+    public function handle(Request $request, Closure $next, ...$roles): Response
     {
         $user = $request->user();
-        if (!$user) return redirect()->route('login');
 
-        $current = strtolower($user->role ?? '');
-        $roles   = array_map('strtolower', $roles);
-        if (!in_array($current, $roles, true)) abort(403, 'Forbidden');
+        if (!$user) {
+            abort(401, 'Harus login terlebih dahulu.');
+        }
+
+        if (!in_array(strtolower($user->role), array_map('strtolower', $roles))) {
+            abort(403, 'Anda tidak memiliki izin untuk mengakses halaman ini.');
+        }
 
         return $next($request);
     }

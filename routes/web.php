@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Inventory\UserController;
+use App\Http\Controllers\Inventory\FAQController;
 use App\Http\Controllers\Inventory\PemesananController;
 use App\Http\Controllers\Inventory\PenerimaanController;
 use App\Http\Controllers\Inventory\BastController;
@@ -27,6 +29,10 @@ Route::get('/login', function () {
 
 // Callback: diterima dari SSO provider
 Route::get('/auth/callback', [SSOController::class, 'callback'])->name('sso.callback');
+
+// FAQ Page
+Route::middleware(['auth'])->get('/faq', [\App\Http\Controllers\Inventory\FAQController::class, 'index'])
+    ->name('faq.index');
 
 // Logout dari sistem + SSO
 Route::post('/logout', function () {
@@ -61,6 +67,15 @@ Route::middleware(['auth'])->get('/after-sso', function () {
     };
 })->name('after.sso');
 
+// ==================== AKUN USER ====================
+Route::middleware(['auth'])->prefix('akun')->group(function () {
+    Route::get('/', [UserController::class, 'index'])->name('akun.index');
+    Route::get('/{id}', [UserController::class, 'show'])->name('akun.show');
+    Route::get('/{id}/edit', [UserController::class, 'edit'])->name('akun.edit');
+    Route::put('/{id}', [UserController::class, 'update'])->name('akun.update');
+    Route::get('/profile/me', [UserController::class, 'profile'])->name('akun.profile');
+});
+
 // ==================== DASHBOARD PER ROLE ====================
 Route::middleware(['auth'])->group(function () {
     Route::view('/super-admin/dashboard', 'super-admin.dashboard')->name('super-admin.dashboard');
@@ -68,6 +83,9 @@ Route::middleware(['auth'])->group(function () {
     Route::view('/instalasi/dashboard', 'instalasi.dashboard')->name('instalasi.dashboard');
     Route::redirect('/dashboard', '/after-sso')->name('dashboard');
 });
+
+// ==================== HALAMAN FAQ ====================
+Route::middleware(['auth'])->get('/faq', [FAQController::class, 'index'])->name('faq.index');
 
 // ==================== INVENTORY MODULE (DENGAN MIDDLEWARE AUTH) ====================
 Route::middleware(['auth'])->group(function () {

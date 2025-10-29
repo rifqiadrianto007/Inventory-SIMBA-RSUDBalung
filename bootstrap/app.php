@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias middleware agar bisa dipanggil langsung di route
         $middleware->alias([
             'prevent-back-history' => PreventBackHistory::class,
-            'role' => RoleMiddleware::class,
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
 
         // Contoh: jika mau menghapus middleware default, bisa aktifkan ini
