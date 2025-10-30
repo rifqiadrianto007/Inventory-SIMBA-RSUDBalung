@@ -1,2 +1,3 @@
-GET http://127.0.0.1:8000/api/v1/notifikasi?user_id=1
-POST http://127.0.0.1:8000/api/v1/notifikasi/5/read
+curl -X POST http://127.0.0.1:8000/api/login \
+-H "Content-Type: application/json" \
+-d '{"email":"admin@example.com","password":"password"}'

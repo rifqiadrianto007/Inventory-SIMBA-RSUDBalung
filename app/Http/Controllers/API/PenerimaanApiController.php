@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\PenerimaanService;
+use Illuminate\Support\Facades\Log;
 
 class PenerimaanApiController extends Controller
 {
@@ -15,16 +16,36 @@ class PenerimaanApiController extends Controller
         $this->service = $service;
     }
 
+    /**
+     * 📋 Ambil semua penerimaan barang
+     */
     public function index()
     {
-        return response()->json($this->service->getAllPenerimaan());
+        try {
+            $data = $this->service->getAllPenerimaan();
+            return response()->json($data, 200);
+        } catch (\Throwable $e) {
+            Log::error('Gagal memuat daftar penerimaan', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Gagal memuat data penerimaan'], 500);
+        }
     }
 
+    /**
+     * 🔍 Ambil detail penerimaan
+     */
     public function show($id)
     {
-        return response()->json($this->service->getPenerimaan($id));
+        try {
+            $data = $this->service->getPenerimaan($id);
+            return response()->json($data, 200);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Penerimaan tidak ditemukan'], 404);
+        }
     }
 
+    /**
+     * 🧾 Simpan penerimaan baru
+     */
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -39,17 +60,48 @@ class PenerimaanApiController extends Controller
             'details.*.harga' => 'required|numeric|min:0',
         ]);
 
-        return response()->json($this->service->createPenerimaan($data));
+        try {
+            $result = $this->service->createPenerimaan($data);
+            return response()->json([
+                'message' => 'Penerimaan berhasil disimpan',
+                'data' => $result
+            ], 201);
+        } catch (\Throwable $e) {
+            Log::error('Gagal menyimpan penerimaan', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Gagal menyimpan penerimaan'], 500);
+        }
     }
 
+    /**
+     * ✅ Set kelayakan barang
+     */
     public function setLayak(Request $request, $id)
     {
         $request->validate(['is_layak' => 'required|boolean']);
-        return response()->json($this->service->setDetailLayak($id, $request->is_layak));
+
+        try {
+            $result = $this->service->setDetailLayak($id, $request->is_layak);
+            return response()->json($result, 200);
+        } catch (\Throwable $e) {
+            Log::error('Gagal memperbarui status kelayakan', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Gagal memperbarui status kelayakan'], 500);
+        }
     }
 
+    /**
+     * 🧩 Konfirmasi penerimaan oleh tim teknis
+     */
     public function confirm($id)
     {
-        return response()->json($this->service->confirmPenerimaan($id));
+        try {
+            $result = $this->service->confirmPenerimaan($id);
+            return response()->json([
+                'message' => 'Penerimaan telah dikonfirmasi',
+                'data' => $result
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::error('Gagal konfirmasi penerimaan', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Gagal mengonfirmasi penerimaan'], 500);
+        }
     }
 }

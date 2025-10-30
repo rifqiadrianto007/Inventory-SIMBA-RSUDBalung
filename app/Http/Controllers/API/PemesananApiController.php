@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\PemesananService;
+use Illuminate\Support\Facades\Log;
 
 class PemesananApiController extends Controller
 {
@@ -15,16 +16,30 @@ class PemesananApiController extends Controller
         $this->service = $service;
     }
 
+    // ✅ Ambil semua pemesanan
     public function index()
     {
-        return response()->json($this->service->getAllPemesanan());
+        try {
+            $data = $this->service->getAllPemesanan();
+            return response()->json($data, 200);
+        } catch (\Throwable $e) {
+            Log::error('Gagal mengambil daftar pemesanan', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Gagal memuat data pemesanan'], 500);
+        }
     }
 
+    // ✅ Ambil detail pemesanan
     public function show($id)
     {
-        return response()->json($this->service->getPemesanan($id));
+        try {
+            $data = $this->service->getPemesanan($id);
+            return response()->json($data, 200);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Data pemesanan tidak ditemukan'], 404);
+        }
     }
 
+    // ✅ Simpan pemesanan baru
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -37,11 +52,23 @@ class PemesananApiController extends Controller
         ]);
 
         $result = $this->service->createPemesanan($data);
-        return response()->json($result);
+        if (isset($result['error'])) {
+            return response()->json(['error' => $result['error']], 400);
+        }
+
+        return response()->json([
+            'message' => 'Pemesanan berhasil dibuat',
+            'data' => $result,
+        ], 201);
     }
 
+    // ✅ Unduh struk
     public function downloadStruk($id)
     {
-        return response()->json($this->service->downloadStruk($id));
+        $path = $this->service->downloadStruk($id);
+        if (isset($path['error'])) {
+            return response()->json($path, 404);
+        }
+        return response()->json($path, 200);
     }
 }

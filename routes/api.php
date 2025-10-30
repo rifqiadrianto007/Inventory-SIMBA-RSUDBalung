@@ -9,6 +9,11 @@ use App\Http\Controllers\API\PenerimaanApiController;
 use App\Http\Controllers\API\BastApiController;
 use App\Http\Controllers\API\ItemApiController;
 use App\Http\Controllers\API\NotifikasiApiController;
+use App\Http\Controllers\API\AuthApiController;
+
+// ===================================================================
+Route::post('/login', [AuthApiController::class, 'login']);
+Route::post('/logout', [AuthApiController::class, 'logout'])->middleware('auth:sanctum');
 
 // ✅ Cek status API (tanpa login)
 Route::get('/v1/status', function () {

@@ -15,7 +15,8 @@ class SSOController extends Controller
 {
     public function redirect(): RedirectResponse
     {
-        return Socialite::driver('laravelpassport')->stateless()->redirect();
+        return Socialite::driver('laravelpassport')->redirect();
+
     }
 
     public function callback(): RedirectResponse
@@ -23,7 +24,8 @@ class SSOController extends Controller
         try {
             Log::info('[SSO CALLBACK START]', request()->all());
 
-            $ssoUser = Socialite::driver('laravelpassport')->stateless()->user();
+            $ssoUser = Socialite::driver('laravelpassport')->user();
+
 
             $me = Http::withToken($ssoUser->token)
                 ->get(config('services.laravelpassport.host') . '/api/me')
@@ -52,7 +54,7 @@ class SSOController extends Controller
                     'email'       => $ssoUser->getEmail(),
                     'password'    => bcrypt(Str::random(16)),
                     'sso_user_id' => $ssoUser->getId(),
-                    'role'        => $primaryRole, 
+                    'role'        => $primaryRole,
                 ]);
             }
 

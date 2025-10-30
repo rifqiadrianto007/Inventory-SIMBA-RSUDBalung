@@ -16,37 +16,36 @@ class ItemApiController extends Controller
         $this->inventory = $inventory;
     }
 
+    // ✅ Ambil semua item
     public function index()
     {
-        return response()->json(Item::with('category', 'satuan')->get());
+        $items = Item::with(['category', 'satuan'])->get();
+        return response()->json($items, 200);
     }
 
+    // ✅ Ambil detail item
     public function show($id)
     {
-        return response()->json(Item::with('category', 'satuan')->findOrFail($id));
+        $item = Item::with(['category', 'satuan'])->find($id);
+        if (!$item) {
+            return response()->json(['error' => 'Item tidak ditemukan'], 404);
+        }
+        return response()->json($item, 200);
     }
 
-    /**
-     * PUT /api/item/{id}/update-stock
-     * body: { "stock_item": 10 }
-     */
+    // ✅ Update stok item
     public function updateStock(Request $request, $id)
     {
-        $data = $request->validate([
-            'stock_item' => 'required|numeric|min:0',
-        ]);
+        $request->validate(['stock_item' => 'required|numeric|min:0']);
+        $item = $this->inventory->updateStock($id, $request->stock_item);
 
-        try {
-            $item = $this->inventory->updateStock((int)$id, (float)$data['stock_item']);
-            return response()->json([
-                'ok' => true,
-                'item' => $item
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'ok' => false,
-                'error' => $e->getMessage()
-            ], 422);
+        if (!$item) {
+            return response()->json(['error' => 'Gagal memperbarui stok'], 400);
         }
+
+        return response()->json([
+            'message' => 'Stok item berhasil diperbarui',
+            'data' => $item
+        ], 200);
     }
 }
