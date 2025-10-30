@@ -3,56 +3,49 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Notifikasi;
+use Illuminate\Http\Request;
 
 class NotifikasiApiController extends Controller
 {
     /**
-     * GET /api/notifikasi
+     * Ambil semua notifikasi untuk user tertentu (atau semua)
      */
     public function index(Request $request)
     {
-        $user = $request->user();
+        // Ambil user_id dari query, misal ?user_id=2
+        $userId = $request->query('user_id');
 
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        $query = Notifikasi::orderByDesc('created_at');
+
+        if ($userId) {
+            $query->where('sso_user_id', $userId);
         }
 
-        // Prioritaskan sso_user_id jika tersedia, fallback ke id (user.id)
-        $ssoUserId = $user->sso_user_id ?? $user->id ?? null;
+        $notes = $query->get();
 
-        $data = Notifikasi::where('sso_user_id', $ssoUserId)
-            ->orderByDesc('created_at')
-            ->get();
-
-        return response()->json(['ok' => true, 'data' => $data]);
+        return response()->json([
+            'ok' => true,
+            'data' => $notes
+        ]);
     }
 
     /**
-     * POST /api/notifikasi/{id}/read
+     * Tandai notifikasi sebagai sudah dibaca
      */
-    public function markRead(Request $request, $id)
+    public function markRead($id)
     {
-        $user = $request->user();
+        $n = Notifikasi::find($id);
 
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        if (!$n) {
+            return response()->json(['error' => 'Notifikasi tidak ditemukan'], 404);
         }
 
-        $ssoUserId = $user->sso_user_id ?? $user->id ?? null;
+        $n->update(['is_read' => true]);
 
-        $notif = Notifikasi::where('id_notifikasi', $id)
-            ->where('sso_user_id', $ssoUserId)
-            ->first();
-
-        if (!$notif) {
-            return response()->json(['ok' => false, 'error' => 'Notifikasi tidak ditemukan atau bukan milik Anda'], 404);
-        }
-
-        $notif->is_read = true;
-        $notif->save();
-
-        return response()->json(['ok' => true, 'message' => 'Notifikasi ditandai dibaca']);
+        return response()->json([
+            'ok' => true,
+            'message' => 'Notifikasi berhasil ditandai dibaca.'
+        ]);
     }
 }
