@@ -12,6 +12,9 @@ use App\Http\Controllers\API\NotifikasiApiController;
 use App\Http\Controllers\API\AuthApiController;
 
 // ===================================================================
+Route::middleware('auth')->post('/sso/token', [AuthApiController::class, 'issueToken']);
+
+// ===================================================================
 Route::post('/login', [AuthApiController::class, 'login']);
 Route::post('/logout', [AuthApiController::class, 'logout'])->middleware('auth:sanctum');
 

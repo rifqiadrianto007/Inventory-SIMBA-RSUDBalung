@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+
+use App\Http\Controllers\Auth\SSOController;
+
 use App\Http\Controllers\Inventory\UserController;
 use App\Http\Controllers\Inventory\FAQController;
 use App\Http\Controllers\Inventory\PemesananController;
@@ -9,32 +12,28 @@ use App\Http\Controllers\Inventory\PenerimaanController;
 use App\Http\Controllers\Inventory\BastController;
 use App\Http\Controllers\Inventory\ItemController;
 use App\Http\Controllers\Inventory\NotifikasiController;
-use App\Http\Controllers\Auth\SSOController;
 
-// ==================== HALAMAN UTAMA ====================
+/*
+|--------------------------------------------------------------------------
+| PUBLIC PAGE
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/', function () {
     return Auth::check()
         ? redirect()->route('after.sso')
-        : view('welcome');
+        : view('welcome'); // ✅ pastikan welcome.blade.php punya tombol login SSO
 })->name('home');
 
-// ==================== AUTENTIKASI SSO ====================
-// Login: arahkan ke SSO provider
-Route::get('/login', function () {
-    if (Auth::check()) {
-        return redirect()->route('after.sso');
-    }
-    return app(SSOController::class)->redirect();
-})->name('login');
+/*
+|--------------------------------------------------------------------------
+| SSO AUTH ROUTES
+|--------------------------------------------------------------------------
+*/
 
-// Callback: diterima dari SSO provider
+Route::get('/login', [SSOController::class, 'redirect'])->name('login');  // ✅ perbaiki dari app() pemanggilan langsung
 Route::get('/auth/callback', [SSOController::class, 'callback'])->name('sso.callback');
 
-// FAQ Page
-Route::middleware(['auth'])->get('/faq', [\App\Http\Controllers\Inventory\FAQController::class, 'index'])
-    ->name('faq.index');
-
-// Logout dari sistem + SSO
 Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
@@ -48,10 +47,13 @@ Route::post('/logout', function () {
         : redirect($returnTo);
 })->name('logout');
 
-// ==================== REDIRECT SETELAH LOGIN SSO ====================
-Route::middleware(['auth'])->get('/after-sso', function () {
-    info('[AFTER-SSO]', ['check' => Auth::check(), 'user' => Auth::id()]);
+/*
+|--------------------------------------------------------------------------
+| AFTER SSO LOGIN REDIRECT
+|--------------------------------------------------------------------------
+*/
 
+Route::middleware(['auth'])->get('/after-sso', function () {
     $role = strtolower(Auth::user()->role ?? '');
 
     if ($role === '') {
@@ -67,30 +69,50 @@ Route::middleware(['auth'])->get('/after-sso', function () {
     };
 })->name('after.sso');
 
-// ==================== AKUN USER ====================
+/*
+|--------------------------------------------------------------------------
+| DASHBOARD PER ROLE
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->group(function () {
+    Route::view('/super-admin/dashboard', 'super-admin.dashboard')->name('super-admin.dashboard');
+    Route::view('/tim-ppk/dashboard', 'tim-ppk.dashboard')->name('tim-ppk.dashboard');
+    Route::view('/instalasi/dashboard', 'instalasi.dashboard')->name('instalasi.dashboard');
+
+    // redirect fallback dashboard
+    Route::redirect('/dashboard', '/after-sso')->name('dashboard');
+});
+
+/*
+|--------------------------------------------------------------------------
+| USER MANAGEMENT
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->prefix('akun')->group(function () {
     Route::get('/', [UserController::class, 'index'])->name('akun.index');
     Route::get('/{id}', [UserController::class, 'show'])->name('akun.show');
     Route::get('/{id}/edit', [UserController::class, 'edit'])->name('akun.edit');
     Route::put('/{id}', [UserController::class, 'update'])->name('akun.update');
+
     Route::get('/profile/me', [UserController::class, 'profile'])->name('akun.profile');
 });
 
-// ==================== DASHBOARD PER ROLE ====================
-Route::middleware(['auth'])->group(function () {
-    Route::view('/super-admin/dashboard', 'super-admin.dashboard')->name('super-admin.dashboard');
-    Route::view('/tim-ppk/dashboard', 'tim-ppk.dashboard')->name('tim-ppk.dashboard');
-    Route::view('/instalasi/dashboard', 'instalasi.dashboard')->name('instalasi.dashboard');
-    Route::redirect('/dashboard', '/after-sso')->name('dashboard');
-});
-
-// ==================== HALAMAN FAQ ====================
+/*
+|--------------------------------------------------------------------------
+| FAQ
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->get('/faq', [FAQController::class, 'index'])->name('faq.index');
 
-// ==================== INVENTORY MODULE (DENGAN MIDDLEWARE AUTH) ====================
+/*
+|--------------------------------------------------------------------------
+| INVENTORY MODULE
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->group(function () {
 
-    // PEMESANAN (Bagian Instalasi / PPK)
+    // ✅ PEMESANAN
     Route::prefix('pemesanan')->group(function () {
         Route::get('/', [PemesananController::class, 'index'])->name('pemesanan.index');
         Route::get('/create', [PemesananController::class, 'create'])->name('pemesanan.create');
@@ -99,7 +121,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{id}/download', [PemesananController::class, 'downloadStruk'])->name('pemesanan.download');
     });
 
-    // PENERIMAAN (Bagian Gudang / Teknisi)
+    // ✅ PENERIMAAN
     Route::prefix('penerimaan')->group(function () {
         Route::get('/', [PenerimaanController::class, 'index'])->name('penerimaan.index');
         Route::get('/{id}', [PenerimaanController::class, 'show'])->name('penerimaan.show');
@@ -107,17 +129,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{id}/confirm', [PenerimaanController::class, 'confirm'])->name('penerimaan.confirm');
     });
 
-    // BAST (Berita Acara Serah Terima)
+    // ✅ BAST
     Route::prefix('bast')->group(function () {
         Route::get('/{id}/download', [BastController::class, 'download'])->name('bast.download');
         Route::post('/{id}/upload', [BastController::class, 'upload'])->name('bast.upload');
     });
 
-    // STOK BARANG
+    // ✅ ITEM/STOK
     Route::prefix('stok')->group(function () {
         Route::get('/', [ItemController::class, 'index'])->name('stok.index');
     });
 
-    // NOTIFIKASI
+    // ✅ NOTIFIKASI
     Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
 });
