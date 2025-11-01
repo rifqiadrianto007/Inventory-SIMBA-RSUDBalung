@@ -13,7 +13,8 @@
         "laravel/socialite": "^5.23",
         "laravel/tinker": "^2.9",
         "socialiteproviders/laravelpassport": "^4.3",
-        "socialiteproviders/manager": "*"
+        "socialiteproviders/manager": "*",
+        "spatie/laravel-permission": "^6.22"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
