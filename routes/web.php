@@ -1,10 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\Auth\SSOController;
-
+use App\Http\Controllers\Inventory\JabatanController;
 use App\Http\Controllers\Inventory\UserController;
 use App\Http\Controllers\Inventory\FAQController;
 use App\Http\Controllers\Inventory\PemesananController;
@@ -31,8 +32,24 @@ Route::get('/', function () {
 |--------------------------------------------------------------------------
 */
 
-Route::get('/login', [SSOController::class, 'redirect'])->name('login');  // ✅ perbaiki dari app() pemanggilan langsung
-Route::get('/auth/callback', [SSOController::class, 'callback'])->name('sso.callback');
+// Route::get('/login', [SSOController::class, 'redirect'])->name('login');  // ✅ perbaiki dari app() pemanggilan langsung
+// Route::get('/auth/callback', [SSOController::class, 'callback'])->name('sso.callback');
+Route::get('/login', function () {
+    return view('auth.login'); // kita buat file-nya nanti
+})->name('login');
+
+Route::post('/login', function (Request $request) {
+    $credentials = $request->only('email', 'password');
+
+    if (Auth::attempt($credentials)) {
+        $request->session()->regenerate();
+        return redirect()->route('after.sso');
+    }
+
+    return back()->withErrors([
+        'email' => 'Email atau password salah',
+    ]);
+})->name('login.submit');
 
 Route::post('/logout', function () {
     Auth::logout();
@@ -142,4 +159,14 @@ Route::middleware(['auth'])->group(function () {
 
     // ✅ NOTIFIKASI
     Route::get('/notifikasi', [NotifikasiController::class, 'index'])->name('notifikasi.index');
+});
+
+// JABATAN MANAGEMENT
+Route::middleware(['auth'])->prefix('jabatan')->group(function () {
+    Route::get('/', [JabatanController::class, 'index'])->name('jabatan.index');
+    Route::get('/create', [JabatanController::class, 'create'])->name('jabatan.create');
+    Route::post('/store', [JabatanController::class, 'store'])->name('jabatan.store');
+    Route::get('/{id}/edit', [JabatanController::class, 'edit'])->name('jabatan.edit');
+    Route::put('/{id}', [JabatanController::class, 'update'])->name('jabatan.update');
+    Route::delete('/{id}', [JabatanController::class, 'destroy'])->name('jabatan.destroy');
 });
